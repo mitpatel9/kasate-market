@@ -1,24 +1,23 @@
 import mongoose from "mongoose";
-import orderModal from "./schema/orderSchema";
+import positionModal from "./schema/positionSchema";
 
 module.exports = {
-  add_order: async (data) => {
+  add_position: async (data) => {
     return new Promise(async (resolve, reject) => {
-      await new orderModal(data)
+      await new positionModal(data)
         .save()
         .then((result) => {
           resolve(result);
         })
         .catch((error) => {
-          console.log(error, "sasas");
           reject(error);
         });
     });
   },
 
-  get_order_Id: async (id) => {
+  get_position_Id: async (id) => {
     return new Promise(async (resolve, reject) => {
-      await orderModal
+      await positionModal
         .findById(id)
         .then((result) => {
           resolve(result);
@@ -29,66 +28,52 @@ module.exports = {
     });
   },
 
-  get_all_order: async (skip, limit) => {
+  get_all_position: async (skip, limit) => {
     return new Promise(async (resolve, reject) => {
-      await orderModal
+      await positionModal
         .aggregate([
           {
             $lookup: {
               from: "markets",
-              let: { marketId: "$marketId" },
+              let: { market: "$market" },
               pipeline: [
                 {
                   $match: {
                     $expr: {
-                      $and: [{ $eq: ["$_id", "$$marketId"] }],
+                      $and: [{ $eq: ["$_id", "$$market"] }],
                     },
                   },
                 },
               ],
-              as: "marketId",
+              as: "market",
             },
           },
-          {
-            $lookup: {
-              from: "outcomes",
-              let: { outcomeId: "$outcomeId" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [{ $eq: ["$_id", "$$outcomeId"] }],
-                    },
-                  },
-                },
-              ],
-              as: "outcomeId",
-            },
-          },
+
           {
             $lookup: {
               from: "users",
-              let: { userId: "$userId" },
+              let: { user: "$user" },
               pipeline: [
                 {
                   $match: {
                     $expr: {
-                      $and: [{ $eq: ["$_id", "$$userId"] }],
+                      $and: [{ $eq: ["$_id", "$$user"] }],
                     },
                   },
                 },
               ],
-              as: "userId",
+              as: "user",
             },
           },
+
           {
             $facet: {
               data: [
                 {
-                  $skip: Number(skip),
+                  $skip: 0,
                 },
                 {
-                  $limit: Number(limit),
+                  $limit: 10,
                 },
               ],
               totalcount: [
@@ -108,9 +93,9 @@ module.exports = {
     });
   },
 
-  update_order: async (id, data) => {
+  update_position: async (id, data) => {
     return new Promise(async (resolve, reject) => {
-      await orderModal
+      await positionModal
         .findByIdAndUpdate(id, data)
         .then((result) => {
           resolve(result);
@@ -121,9 +106,9 @@ module.exports = {
     });
   },
 
-  delete_order: async (id) => {
+  delete_position: async (id) => {
     return new Promise(async (resolve, reject) => {
-      await orderModal
+      await positionModal
         .findOneAndDelete({ _id: id })
         .then((result) => {
           resolve(result);

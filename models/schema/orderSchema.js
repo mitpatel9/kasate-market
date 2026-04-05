@@ -20,11 +20,11 @@ const orderSchema = new mongoose.Schema(
     },
     order_type: {
       type: String,
-      enum: ["LIMIT", "MARKET"],
+      enum: ["limit", "market"],
       required: true,
     },
-    side: { type: String, enum: ["BUY", "SELL"], default: "BUY" },
-    outcome: { type: String, enum: ["YES", "NO"], default: "YES" },
+    side: { type: String, enum: ["buy", "sell"], default: "buy" },
+    outcome: { type: String, enum: ["yes", "no"], default: "yes" },
     price: { type: Number, default: 0 },
     quantity: { type: Number, default: 0 },
     filledQty: { type: Number, default: 0 },
@@ -48,12 +48,7 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
   },
-  {
-    timestamp: {
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-    },
-  },
+  { timestamps: true },
 );
 
 const orderModal =
