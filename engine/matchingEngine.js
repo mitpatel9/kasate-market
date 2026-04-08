@@ -38,7 +38,7 @@ async function matchOrder(incomingOrder) {
         const tradePrice = bestMatch.price;
         const totalCost = tradeQty * tradePrice;
 
-        // 💰 SETTLE WALLET
+        //  SETTLE WALLET
         await settleTrade(
           isBuy ? incomingOrder.userId : bestMatch.userId,
           isBuy ? bestMatch.userId : incomingOrder.userId,
@@ -46,7 +46,7 @@ async function matchOrder(incomingOrder) {
           session
         );
 
-        // 🧾 TRADE
+        //  TRADE
         await createTrade({
           buyOrderId: isBuy ? incomingOrder._id : bestMatch._id,
           sellOrderId: isBuy ? bestMatch._id : incomingOrder._id,
@@ -59,7 +59,7 @@ async function matchOrder(incomingOrder) {
           takerSide: incomingOrder.side,
         });
 
-        // 📊 POSITION
+        // POSITION
         await updatePosition(
           incomingOrder,
           bestMatch,
