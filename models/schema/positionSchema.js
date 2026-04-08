@@ -20,8 +20,10 @@ const positionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    yesAvgPrice: { type: Number, default: 0 },
+    noAvgPrice: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 //Prevent duplicate positions (one per user per market)

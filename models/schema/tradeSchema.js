@@ -28,6 +28,7 @@ const tradeSchema = new mongoose.Schema(
     },
     price: { type: Number, default: 0 },
     quantity: { type: Number, default: 0 },
+    takerSide: { type: String, enum: ["buy", "sell"] },
   },
   { timestamps: true },
 );

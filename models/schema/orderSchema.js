@@ -25,10 +25,9 @@ const orderSchema = new mongoose.Schema(
     },
     side: { type: String, enum: ["buy", "sell"], default: "buy" },
     outcome: { type: String, enum: ["yes", "no"], default: "yes" },
-    price: { type: Number, default: 0 },
+    price: { type: Number, required: true },
     quantity: { type: Number, default: 0 },
     filledQty: { type: Number, default: 0 },
-    remaining_quantity: { type: Number, default: 0 },
     lockedAmount: {
       type: Number,
       default: 0,
@@ -50,6 +49,8 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+orderSchema.index({ marketId: 1, outcomeId: 1, side: 1, price: -1, createdAt: 1 });
 
 const orderModal =
   mongoose.models.order || mongoose.model("order", orderSchema);
