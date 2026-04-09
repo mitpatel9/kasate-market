@@ -52,6 +52,6 @@ const orderSchema = new mongoose.Schema(
 
 orderSchema.index({ marketId: 1, outcomeId: 1, side: 1, price: -1, createdAt: 1 });
 
-const orderModal =
+const orderModel =
   mongoose.models.order || mongoose.model("order", orderSchema);
-module.exports = orderModal;
+module.exports = orderModel;

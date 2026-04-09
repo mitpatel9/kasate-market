@@ -1,6 +1,6 @@
-import dbConnect from "../../lib/mongodb";
+import dbConnect from "@/lib/mongodb";
 import nextConnect from "next-connect";
-import orderModal from "../../models/orderModal";
+import orderModel from "@/models/orderModel";
 
 const apiRoute = nextConnect({
   onError(error, req, res) {
@@ -22,7 +22,7 @@ apiRoute.post(async (req, res) => {
   res.setHeader("Allow", ["POST"]);
   try {
     await dbConnect();
-    const order = await orderModal.add_order(req.body);
+    const order = await orderModel.add_order(req.body);
     return res.status(201).json({
       success: true,
       data: order,
@@ -39,21 +39,21 @@ apiRoute.get(async (req, res) => {
   try {
     await dbConnect();
     if (req.query.id) {
-      const order = await orderModal.get_order_Id(req.query.id);
+      const order = await orderModel.get_order_Id(req.query.id);
       return res.status(200).json({
         success: true,
         data: order,
-        msg: "Order get succesfully..",
+        msg: "Order get successfully..",
       });
     } else if ((req.query.skip, req.query.limit)) {
-      const order = await orderModal.get_all_order(
+      const order = await orderModel.get_all_order(
         req.query.skip,
         req.query.limit,
       );
       return res.status(200).json({
         success: true,
         data: order,
-        msg: "Order get succesfully..",
+        msg: "Order get successfully..",
       });
     }
   } catch {
@@ -66,7 +66,7 @@ apiRoute.put(async (req, res) => {
   res.setHeader("Allow", ["PUT"]);
   try {
     await dbConnect();
-    await orderModal.update_order(req.body.id, req.body);
+    await orderModel.update_order(req.body.id, req.body);
     return res
       .status(201)
       .json({ success: true, msg: "Order data has been Updated." });
@@ -80,11 +80,11 @@ apiRoute.delete(async (req, res) => {
   res.setHeader("Allow", ["DELETE"]);
   try {
     await dbConnect();
-    const order = await orderModal.delete_order(req.query.id);
+    const order = await orderModel.delete_order(req.query.id);
     return res.status(200).json({
       success: true,
       data: order,
-      msg: "Order has been delete succesfully.",
+      msg: "Order has been deleted successfully.",
     });
   } catch {
     return res.status(400).json({ success: false, msg: "Wrong Details" });

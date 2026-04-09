@@ -2,11 +2,11 @@ import mongoose from "mongoose";
 
 const tradeSchema = new mongoose.Schema(
   {
-    buyorderId: {
+    buyOrderId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
-    sellorderId: {
+    sellOrderId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
@@ -33,6 +33,6 @@ const tradeSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const tradeModal =
+const tradeModel =
   mongoose.models.trade || mongoose.model("trade", tradeSchema);
-module.exports = tradeModal;
+module.exports = tradeModel;

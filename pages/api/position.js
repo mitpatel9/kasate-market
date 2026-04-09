@@ -1,6 +1,6 @@
 import dbConnect from "../../lib/mongodb";
 import nextConnect from "next-connect";
-import positionModal from "../../models/positionModal";
+import positionModel from "../../models/positionModel";
 
 const apiRoute = nextConnect({
   onError(error, req, res) {
@@ -22,7 +22,7 @@ apiRoute.post(async (req, res) => {
   res.setHeader("Allow", ["POST"]);
   try {
     await dbConnect();
-    const position = await positionModal.add_position(req.body);
+    const position = await positionModel.add_position(req.body);
     return res.status(201).json({
       success: true,
       data: position,
@@ -39,21 +39,21 @@ apiRoute.get(async (req, res) => {
   try {
     await dbConnect();
     if (req.query.id) {
-      const position = await positionModal.get_position_Id(req.query.id);
+      const position = await positionModel.get_position_Id(req.query.id);
       return res.status(200).json({
         success: true,
         data: position,
-        msg: "position get succesfully..",
+        msg: "position get successfully..",
       });
     } else if ((req.query.skip, req.query.limit)) {
-      const position = await positionModal.get_all_position(
+      const position = await positionModel.get_all_position(
         req.query.skip,
         req.query.limit,
       );
       return res.status(200).json({
         success: true,
         data: position,
-        msg: "position get succesfully..",
+        msg: "position get successfully..",
       });
     }
   } catch {
@@ -66,7 +66,7 @@ apiRoute.put(async (req, res) => {
   res.setHeader("Allow", ["PUT"]);
   try {
     await dbConnect();
-    await positionModal.update_position(req.body.id, req.body);
+    await positionModel.update_position(req.body.id, req.body);
     return res
       .status(201)
       .json({ success: true, msg: "position data has been Updated." });
@@ -80,11 +80,11 @@ apiRoute.delete(async (req, res) => {
   res.setHeader("Allow", ["DELETE"]);
   try {
     await dbConnect();
-    const position = await positionModal.delete_position(req.query.id);
+    const position = await positionModel.delete_position(req.query.id);
     return res.status(200).json({
       success: true,
       data: position,
-      msg: "Position has been delete succesfully.",
+      msg: "Position has been deleted successfully.",
     });
   } catch {
     return res.status(400).json({ success: false, msg: "Wrong Details" });

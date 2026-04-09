@@ -9,7 +9,7 @@ const positionSchema = new mongoose.Schema(
     },
     market: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "mrkets",
+      ref: "markets",
       required: true,
     },
     yesShares: {
@@ -29,6 +29,6 @@ const positionSchema = new mongoose.Schema(
 //Prevent duplicate positions (one per user per market)
 positionSchema.index({ user: 1, market: 1 }, { unique: true });
 
-const positionModal =
+const positionModel =
   mongoose.models.position || mongoose.model("position", positionSchema);
-module.exports = positionModal;
+module.exports = positionModel;
