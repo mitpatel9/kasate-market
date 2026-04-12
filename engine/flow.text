@@ -1,0 +1,13 @@
+User places order
+↓
+API saves order (Mongo)
+↓
+Acquire Redis lock (marketId)
+↓
+Matching engine runs (reads/writes Redis)
+↓
+Trades + positions saved (Mongo)
+↓
+Release lock
+↓
+WebSocket emit
