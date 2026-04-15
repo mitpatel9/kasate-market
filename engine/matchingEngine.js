@@ -1,91 +1,89 @@
-const mongoose = require("mongoose");
+import { redis } from "../redis/redisClient.js";
+import {
+  addOrder,
+  getBestBid,
+  getBestAsk,
+  removeOrder,
+} from "./orderbook.js";
 
-const { getBook, addOrderToBook } = require("./orderBook");
-const { createTrade } = require("../services/tradeService");
-const { updatePosition } = require("../services/positionService");
-const { settleTrade } = require("../services/walletService");
+// Execute trade
+async function createTrade(buyOrder, sellOrder, quantity, price) {
+  const trade = {
+    buyOrderId: buyOrder.id,
+    sellOrderId: sellOrder.id,
+    price,
+    quantity,
+    timestamp: Date.now(),
+  };
 
-async function matchOrder(incomingOrder) {
-  const session = await mongoose.startSession();
+  await redis.lpush("trades", JSON.stringify(trade));
 
-  try {
-    await session.withTransaction(async () => {
-      const book = getBook(
-        incomingOrder.marketId,
-        incomingOrder.outcomeId
-      );
-
-      const isBuy = incomingOrder.side === "buy";
-      const oppositeOrders = isBuy ? book.asks : book.bids;
-
-      while (incomingOrder.filledQty < incomingOrder.quantity) {
-        if (oppositeOrders.length === 0) break;
-
-        const bestMatch = oppositeOrders[0];
-
-        if (incomingOrder.order_type === "limit") {
-          if (isBuy && incomingOrder.price < bestMatch.price) break;
-          if (!isBuy && incomingOrder.price > bestMatch.price) break;
-        }
-
-        const remainingIncoming =
-          incomingOrder.quantity - incomingOrder.filledQty;
-
-        const remainingMatch =
-          bestMatch.quantity - bestMatch.filledQty;
-
-        const tradeQty = Math.min(remainingIncoming, remainingMatch);
-        const tradePrice = bestMatch.price;
-        const totalCost = tradeQty * tradePrice;
-
-        //  SETTLE WALLET
-        await settleTrade(
-          isBuy ? incomingOrder.userId : bestMatch.userId,
-          isBuy ? bestMatch.userId : incomingOrder.userId,
-          totalCost,
-          session
-        );
-
-        //  TRADE
-        await createTrade({
-          buyOrderId: isBuy ? incomingOrder._id : bestMatch._id,
-          sellOrderId: isBuy ? bestMatch._id : incomingOrder._id,
-          buyerId: isBuy ? incomingOrder.userId : bestMatch.userId,
-          sellerId: isBuy ? bestMatch.userId : incomingOrder.userId,
-          marketId: incomingOrder.marketId,
-          outcomeId: incomingOrder.outcomeId,
-          price: tradePrice,
-          quantity: tradeQty,
-          takerSide: incomingOrder.side,
-        });
-
-        // POSITION
-        await updatePosition(
-          incomingOrder,
-          bestMatch,
-          tradeQty,
-          tradePrice,
-          session
-        );
-
-        incomingOrder.filledQty += tradeQty;
-        bestMatch.filledQty += tradeQty;
-
-        if (bestMatch.filledQty === bestMatch.quantity) {
-          bestMatch.status = "FILLED";
-          oppositeOrders.shift();
-        }
-      }
-
-      if (incomingOrder.filledQty < incomingOrder.quantity) {
-        addOrderToBook(incomingOrder);
-      }
-    });
-  } finally {
-    session.endSession();
-  }
-
-  return incomingOrder;
+  console.log("TRADE EXECUTED:", trade);
 }
 
-module.exports = { matchOrder };
+// Matching logic
+export async function processOrder(order) {
+  if (order.side === "buy") {
+    await matchBuyOrder(order);
+  } else {
+    await matchSellOrder(order);
+  }
+}
+
+// BUY ORDER MATCHING
+async function matchBuyOrder(order) {
+  while (order.quantity > 0) {
+    const bestAskId = await getBestAsk();
+    if (!bestAskId) break;
+
+    const bestAsk = await redis.hgetall(`order:${bestAskId}`);
+
+    if (order.price < Number(bestAsk.price)) break;
+
+    const tradeQty = Math.min(order.quantity, bestAsk.quantity);
+
+    await createTrade(order, bestAsk, tradeQty, bestAsk.price);
+
+    order.quantity -= tradeQty;
+    bestAsk.quantity -= tradeQty;
+
+    if (bestAsk.quantity <= 0) {
+      await removeOrder(bestAsk.id, "sell");
+    } else {
+      await redis.hset(`order:${bestAsk.id}`, bestAsk);
+    }
+  }
+
+  if (order.quantity > 0) {
+    await addOrder(order);
+  }
+}
+
+// SELL ORDER MATCHING
+async function matchSellOrder(order) {
+  while (order.quantity > 0) {
+    const bestBidId = await getBestBid();
+    if (!bestBidId) break;
+
+    const bestBid = await redis.hgetall(`order:${bestBidId}`);
+
+    if (order.price > Number(bestBid.price)) break;
+
+    const tradeQty = Math.min(order.quantity, bestBid.quantity);
+
+    await createTrade(bestBid, order, tradeQty, bestBid.price);
+
+    order.quantity -= tradeQty;
+    bestBid.quantity -= tradeQty;
+
+    if (bestBid.quantity <= 0) {
+      await removeOrder(bestBid.id, "buy");
+    } else {
+      await redis.hset(`order:${bestBid.id}`, bestBid);
+    }
+  }
+
+  if (order.quantity > 0) {
+    await addOrder(order);
+  }
+}

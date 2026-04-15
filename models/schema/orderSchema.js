@@ -12,7 +12,6 @@ const orderSchema = new mongoose.Schema(
       ref: "outcomes",
       required: true,
     },
-    orderId: { type: String },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",
@@ -26,7 +25,7 @@ const orderSchema = new mongoose.Schema(
     side: { type: String, enum: ["buy", "sell"], default: "buy" },
     outcome: { type: String, enum: ["yes", "no"], default: "yes" },
     price: { type: Number, required: true },
-    quantity: { type: Number, default: 0 },
+    quantity: { type: Number, required: true },
     filledQty: { type: Number, default: 0 },
     lockedAmount: {
       type: Number,
@@ -50,8 +49,19 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-orderSchema.index({ marketId: 1, outcomeId: 1, side: 1, price: -1, createdAt: 1 });
+orderSchema.index({
+  marketId: 1,
+  outcomeId: 1,
+  side: 1,
+  price: -1,
+  createdAt: 1,
+});
 
-const orderModel =
+export const orderModel =
   mongoose.models.order || mongoose.model("order", orderSchema);
-module.exports = orderModel;
+
+//"OPEN"  == Order created but NOT matched yet
+//  "PARTIAL" == Order partially filled
+// "FILLED" == Order completely executed
+// "CANCELLED" == User cancels order manually
+//  "REJECTED" == Order never accepted (insufficient balance invalid price market closed)

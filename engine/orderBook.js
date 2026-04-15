@@ -1,66 +1,52 @@
-const books = new Map();
+import { redis } from "../redis/redisClient.js";
 
-function getKey(marketId, outcomeId) {
-  return `${marketId}_${outcomeId}`;
-}
+// Keys
+const BID_KEY = "orderbook:bids";
+const ASK_KEY = "orderbook:asks";
 
-function getBook(marketId, outcomeId) {
-  const key = getKey(marketId, outcomeId);
+// Add Order
+export async function addOrder(order) {
+  const { id, price, quantity, side } = order;
 
-  if (!books.has(key)) {
-    books.set(key, {
-      bids: [],
-      asks: [],
+  // Store full order
+  await redis.hset(`order:${id}`, {
+    ...order,
+  });
+
+  // Add to orderbook
+  if (side === "buy") {
+    // Negative price for max heap behavior
+    await redis.zadd(BID_KEY, {
+      score: -price,
+      member: id,
+    });
+  } else {
+    await redis.zadd(ASK_KEY, {
+      score: price,
+      member: id,
     });
   }
-
-  return books.get(key);
 }
 
-function sortBids(bids) {
-  return bids.sort((a, b) => {
-    if (b.price === a.price) {
-      return new Date(a.createdAt) - new Date(b.createdAt);
-    }
-    return b.price - a.price;
-  });
+// Get Best Bid
+export async function getBestBid() {
+  const res = await redis.zrange(BID_KEY, 0, 0);
+  return res[0];
 }
 
-function sortAsks(asks) {
-  return asks.sort((a, b) => {
-    if (a.price === b.price) {
-      return new Date(a.createdAt) - new Date(b.createdAt);
-    }
-    return a.price - b.price;
-  });
+// Get Best Ask
+export async function getBestAsk() {
+  const res = await redis.zrange(ASK_KEY, 0, 0);
+  return res[0];
 }
 
-function addOrderToBook(order) {
-  const book = getBook(order.marketId, order.outcomeId);
-
-  if (order.side === "buy") {
-    book.bids.push(order);
-    sortBids(book.bids);
+// Remove order
+export async function removeOrder(id, side) {
+  if (side === "buy") {
+    await redis.zrem(BID_KEY, id);
   } else {
-    book.asks.push(order);
-    sortAsks(book.asks);
+    await redis.zrem(ASK_KEY, id);
   }
+
+  await redis.del(`order:${id}`);
 }
-
-function removeOrderFromBook(order) {
-  const book = getBook(order.marketId, order.outcomeId);
-
-  const list = order.side === "buy" ? book.bids : book.asks;
-
-  const index = list.findIndex(
-    (o) => o._id.toString() === order._id.toString()
-  );
-
-  if (index !== -1) list.splice(index, 1);
-}
-
-module.exports = {
-  getBook,
-  addOrderToBook,
-  removeOrderFromBook,
-};
