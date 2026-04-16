@@ -29,6 +29,6 @@ const positionSchema = new mongoose.Schema(
 //Prevent duplicate positions (one per user per market)
 positionSchema.index({ user: 1, market: 1 }, { unique: true });
 
-const positionModel =
+export const positionModel =
   mongoose.models.position || mongoose.model("position", positionSchema);
-module.exports = positionModel;
+

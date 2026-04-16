@@ -33,6 +33,6 @@ const tradeSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const tradeModel =
+export const tradeModel =
   mongoose.models.trade || mongoose.model("trade", tradeSchema);
-module.exports = tradeModel;
+
