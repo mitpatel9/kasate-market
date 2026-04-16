@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(cors());
 
 // Initialize Redis connection
-connectRedis();
+//connectRedis();
 
 // Routes
 app.use("/api", orderRoutes);

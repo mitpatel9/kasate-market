@@ -35,10 +35,10 @@ export async function placeOrder(req, res) {
     }
 
     // order create
-    const order = await add_order({
-      ...req.body,
-      status: "OPEN",
-    });
+    // const order = await add_order({
+    //   ...req.body,
+    //   status: "OPEN",
+    // });
 
     // Process order matching
     try {
