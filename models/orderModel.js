@@ -1,30 +1,12 @@
 import mongoose from "mongoose";
-import {orderModel} from "./schema/orderSchema.js";
+import { orderModel } from "./schema/orderSchema.js";
 
 export const add_order = async (data) => {
-  return new Promise(async (resolve, reject) => {
-    await new orderModel(data)
-      .save()
-      .then((result) => {
-        resolve(result);
-      })
-      .catch((error) => {
-        reject(error);
-      });
-  });
+  return await new orderModel(data).save();
 };
 
 export const get_order_Id = async (id) => {
-  return new Promise(async (resolve, reject) => {
-    await orderModel
-      .findById(id)
-      .then((result) => {
-        resolve(result);
-      })
-      .catch((error) => {
-        reject(error);
-      });
-  });
+  return await orderModel.findById(id);
 };
 
 export const get_all_order = async (skip, limit) => {

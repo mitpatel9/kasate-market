@@ -91,6 +91,5 @@ const marketSchema = new mongoose.Schema(
   },
 );
 
-const marketModel =
+export const marketModel =
   mongoose.models.market || mongoose.model("market", marketSchema);
-module.exports = marketModel;

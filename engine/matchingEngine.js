@@ -4,7 +4,7 @@ import {
   getBestBid,
   getBestAsk,
   removeOrder,
-} from "./orderbook.js";
+} from "./orderBook.js";
 
 // Execute trade
 async function createTrade(buyOrder, sellOrder, quantity, price) {

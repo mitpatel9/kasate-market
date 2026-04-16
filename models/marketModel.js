@@ -1,287 +1,221 @@
 import mongoose from "mongoose";
-import marketModel from "./schema/marketSchema";
+import { marketModel } from "./schema/marketSchema.js";
 
-module.exports = {
-  add_market: async (data) => {
-    return new Promise(async (resolve, reject) => {
-      await new marketModel(data)
-        .save()
-        .then((result) => {
-          resolve(result);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
-  },
+export const add_market = async (data) => {
+  return await new marketModel(data).save();
+};
 
-  get_market_Id: async (id) => {
-    return new Promise(async (resolve, reject) => {
-      await marketModel
-        .findById(id)
-        .then((result) => {
-          resolve(result);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
-  },
+export const get_market_Id = async (id) => {
+  return await marketModel.findById(id);
+};
 
-  all_market: async () => {
-    return new Promise(async (resolve, reject) => {
-      await marketModel
-        .aggregate([
+export const all_market = async () => {
+  return await marketModel.aggregate([
+    {
+      $match: {
+        status: "Active",
+      },
+    },
+  ]);
+};
+
+export const get_all_market = async (skip, limit) => {
+  return await marketModel.aggregate([
+    {
+      $lookup: {
+        from: "menus",
+        let: { menu_id: "$menu_id" },
+        pipeline: [
           {
             $match: {
-              status: "Active",
+              $expr: {
+                $and: [{ $eq: ["$_id", "$$menu_id"] }],
+              },
             },
           },
-        ])
-        .then((result) => {
-          resolve(result);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
-  },
-
-  get_all_market: async (skip, limit) => {
-    return new Promise(async (resolve, reject) => {
-      await marketModel
-        .aggregate([
+        ],
+        as: "menu_id",
+      },
+    },
+    {
+      $lookup: {
+        from: "submenus",
+        let: { category_id: "$category_id" },
+        pipeline: [
           {
-            $lookup: {
-              from: "menus",
-              let: { menu_id: "$menu_id" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [{ $eq: ["$_id", "$$menu_id"] }],
-                    },
-                  },
-                },
-              ],
-              as: "menu_id",
+            $match: {
+              $expr: {
+                $and: [{ $eq: ["$_id", "$$category_id"] }],
+              },
             },
           },
+        ],
+        as: "category_id",
+      },
+    },
+    {
+      $lookup: {
+        from: "admins",
+        let: { creatorId: "$creatorId" },
+        pipeline: [
           {
-            $lookup: {
-              from: "submenus",
-              let: { category_id: "$category_id" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [{ $eq: ["$_id", "$$category_id"] }],
-                    },
-                  },
-                },
-              ],
-              as: "category_id",
+            $match: {
+              $expr: {
+                $and: [{ $eq: ["$_id", "$$creatorId"] }],
+              },
             },
           },
-          {
-            $lookup: {
-              from: "admins",
-              let: { creatorId: "$creatorId" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [{ $eq: ["$_id", "$$creatorId"] }],
-                    },
-                  },
-                },
-              ],
-              as: "creatorId",
-            },
+        ],
+        as: "creatorId",
+      },
+    },
+    {
+      $addFields: {
+        outcomes: {
+          $map: {
+            input: "$outcomes",
+            as: "o",
+            in: { $toObjectId: "$$o" },
           },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "outcomes",
+        localField: "outcomes",
+        foreignField: "_id",
+        as: "outcomes",
+      },
+    },
+    {
+      $addFields: {
+        tags: {
+          $map: {
+            input: "$tags",
+            as: "t",
+            in: { $toObjectId: "$$t" },
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "tags",
+        localField: "tags",
+        foreignField: "_id",
+        as: "tags",
+      },
+    },
+    {
+      $unwind: {
+        path: "$rules_summary",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "outcomes",
+        let: {
+          outcomeId: "$rules_summary.outcomes_id",
+        },
+        pipeline: [
           {
-            $addFields: {
-              outcomes: {
-                $map: {
-                  input: "$outcomes",
-                  as: "o",
-                  in: { $toObjectId: "$$o" },
-                },
+            $match: {
+              $expr: {
+                $eq: ["$_id", "$$outcomeId"],
               },
             },
           },
           {
-            $lookup: {
-              from: "outcomes",
-              localField: "outcomes",
-              foreignField: "_id",
-              as: "outcomes",
+            $project: {
+              _id: 1,
+              title: 1,
             },
+          },
+        ],
+        as: "rules_summary.outcomes_id",
+      },
+    },
+    {
+      $unwind: {
+        path: "$rules_summary.outcomes_id",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $group: {
+        _id: "$_id",
+        doc: { $first: "$$ROOT" },
+        rules_summary: { $push: "$rules_summary" },
+      },
+    },
+    {
+      $replaceRoot: {
+        newRoot: {
+          $mergeObjects: ["$doc", { rules_summary: "$rules_summary" }],
+        },
+      },
+    },
+    {
+      $facet: {
+        data: [
+          {
+            $skip: Number(skip),
           },
           {
-            $addFields: {
-              tags: {
-                $map: {
-                  input: "$tags",
-                  as: "t",
-                  in: { $toObjectId: "$$t" },
-                },
-              },
-            },
+            $limit: Number(limit),
           },
+        ],
+        totalCount: [
           {
-            $lookup: {
-              from: "tags",
-              localField: "tags",
-              foreignField: "_id",
-              as: "tags",
-            },
+            $count: "length",
           },
-          {
-            $unwind: {
-              path: "$rules_summary",
-              preserveNullAndEmptyArrays: true,
-            },
-          },
-          {
-            $lookup: {
-              from: "outcomes",
-              let: {
-                outcomeId: "$rules_summary.outcomes_id",
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $eq: ["$_id", "$$outcomeId"],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    _id: 1,
-                    title: 1,
-                  },
-                },
-              ],
-              as: "rules_summary.outcomes_id",
-            },
-          },
-          {
-            $unwind: {
-              path: "$rules_summary.outcomes_id",
-              preserveNullAndEmptyArrays: true,
-            },
-          },
-          {
-            $group: {
-              _id: "$_id",
-              doc: { $first: "$$ROOT" },
-              rules_summary: { $push: "$rules_summary" },
-            },
-          },
-          {
-            $replaceRoot: {
-              newRoot: {
-                $mergeObjects: ["$doc", { rules_summary: "$rules_summary" }],
-              },
-            },
-          },
+        ],
+      },
+    },
+  ]);
+};
 
-          {
-            $facet: {
-              data: [
-                {
-                  $skip: Number(skip),
-                },
-                {
-                  $limit: Number(limit),
-                },
-              ],
-              totalCount: [
-                {
-                  $count: "length",
-                },
-              ],
-            },
-          },
-        ])
-        .then((result) => {
-          resolve(result);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
-  },
+export const get_market_category = async (category, sub) => {
+  let obj = { status: "Active", visibility: "Public" };
 
-  get_market_category: async (category, sub) => {
-    return new Promise(async (resolve, reject) => {
-      let obj = { status: "Active", visibility: "Public" };
-
-      if (category) {
-        obj.menu_id = new mongoose.Types.ObjectId(category);
-      }
-      if (sub) {
-        obj.category_id = new mongoose.Types.ObjectId(sub);
-      }
-      await marketModel
-        .aggregate([
-          {
-            $match: obj,
+  if (category) {
+    obj.menu_id = new mongoose.Types.ObjectId(category);
+  }
+  if (sub) {
+    obj.category_id = new mongoose.Types.ObjectId(sub);
+  }
+  return await marketModel.aggregate([
+    {
+      $match: obj,
+    },
+    {
+      $addFields: {
+        outcomes: {
+          $map: {
+            input: "$outcomes",
+            as: "o",
+            in: { $toObjectId: "$$o" },
           },
-          {
-            $addFields: {
-              outcomes: {
-                $map: {
-                  input: "$outcomes",
-                  as: "o",
-                  in: { $toObjectId: "$$o" },
-                },
-              },
-            },
-          },
-          {
-            $lookup: {
-              from: "outcomes",
-              localField: "outcomes",
-              foreignField: "_id",
-              as: "outcomes",
-            },
-          },
-        ])
-        .then((result) => {
-          resolve(result);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
-  },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "outcomes",
+        localField: "outcomes",
+        foreignField: "_id",
+        as: "outcomes",
+      },
+    },
+  ]);
+};
 
-  update_market: async (id, data) => {
-    return new Promise(async (resolve, reject) => {
-      await marketModel
-        .findByIdAndUpdate(id, data)
-        .then((result) => {
-          resolve(result);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
-  },
+export const update_market = async (id, data) => {
+  return await marketModel.findByIdAndUpdate(id, data, { new: true });
+};
 
-  delete_market: async (id) => {
-    return new Promise(async (resolve, reject) => {
-      await marketModel
-        .findOneAndDelete({ _id: id })
-        .then((result) => {
-          resolve(result);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
-  },
+export const delete_market = async (id) => {
+  return await marketModel.findOneAndDelete({ _id: id });
 };
