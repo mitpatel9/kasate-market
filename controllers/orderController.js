@@ -1,6 +1,6 @@
 //import { processOrder } from "../engine/matchingEngine.js";
 import dbConnect from "../lib/mongodb.js";
-import { add_order } from "../models/orderModel.js";
+import { add_order, get_order_Id } from "../models/orderModel.js";
 import { processOrder } from "../engine/matchingEngine.js";
 
 export async function placeOrder(req, res) {
@@ -52,6 +52,41 @@ export async function placeOrder(req, res) {
       data: order,
       msg: "Your order has been created successfully.",
     });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, msg: "Server Error", error: error.message });
+  }
+}
+
+export async function getOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    await dbConnect();
+    const order = await get_order_Id(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, msg: "Order not found" });
+    }
+    return res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, msg: "Server Error", error: error.message });
+  }
+}
+
+export async function cancelOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    await dbConnect();
+    const order = await get_order_Id(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, msg: "Order not found" });
+    }
+    // Update order status to CANCELLED
+    order.status = "CANCELLED";
+    await order.save();
+    return res.status(200).json({ success: true, msg: "Order cancelled successfully" });
   } catch (error) {
     return res
       .status(500)
