@@ -22,11 +22,14 @@ const orderSchema = new mongoose.Schema(
       enum: ["limit", "market"],
       required: true,
     },
+    orderId: { type: String },
     side: { type: String, enum: ["buy", "sell"], default: "buy" },
     outcome: { type: String, enum: ["yes", "no"], default: "yes" },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
+    remainingQuantity: { type: Number, required: true },
     filledQty: { type: Number, default: 0 },
+    averagePrice: { type: Number, default: 0 },
     lockedAmount: {
       type: Number,
       default: 0,
@@ -60,8 +63,8 @@ orderSchema.index({
 export const orderModel =
   mongoose.models.order || mongoose.model("order", orderSchema);
 
-//"OPEN"  == Order created but NOT matched yet
-//  "PARTIAL" == Order partially filled
+// "OPEN"  == Order created but NOT matched yet
+// "PARTIAL" == Order partially filled
 // "FILLED" == Order completely executed
 // "CANCELLED" == User cancels order manually
-//  "REJECTED" == Order never accepted (insufficient balance invalid price market closed)
+// "REJECTED" == Order never accepted (insufficient balance invalid price market closed)

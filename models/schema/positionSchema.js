@@ -12,6 +12,10 @@ const positionSchema = new mongoose.Schema(
       ref: "markets",
       required: true,
     },
+    outcome: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
     yesShares: {
       type: Number,
       default: 0,
@@ -22,6 +26,8 @@ const positionSchema = new mongoose.Schema(
     },
     yesAvgPrice: { type: Number, default: 0 },
     noAvgPrice: { type: Number, default: 0 },
+    realizedPnl: { type: Number, default: 0 },
+    unrealizedPnl: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
@@ -31,4 +37,3 @@ positionSchema.index({ user: 1, market: 1 }, { unique: true });
 
 export const positionModel =
   mongoose.models.position || mongoose.model("position", positionSchema);
-

@@ -1,0 +1,145 @@
+🧪 1. Basic Match (Full Fill)
+Initial Order Book
+SELL:
+Price  Qty
+100    5
+Incoming Order
+BUY 5 @ 100
+Expected Result
+Trade executed: 5 @ 100
+Order book becomes empty
+🧪 2. Partial Fill
+Initial Order Book
+SELL:
+100    5
+Incoming Order
+BUY 10 @ 100
+Expected Result
+Trade: 5 @ 100
+Remaining BUY: 5 goes to book
+BUY:
+100    5
+🧪 3. Multiple Price Levels (Best Price Priority)
+Initial Order Book
+SELL:
+100    5
+101    10
+Incoming Order
+BUY 12 @ 101
+Expected Result
+Match 5 @ 100 ✅ (better price first)
+Match 7 @ 101
+Remaining SELL:
+SELL:
+101    3
+🧪 4. Price-Time Priority
+Initial Order Book
+SELL:
+100    OrderA (qty 5, older)
+100    OrderB (qty 5, newer)
+Incoming Order
+BUY 6 @ 100
+Expected Result
+Fill OrderA بالكامل (5)
+Fill OrderB partially (1)
+
+Remaining:
+
+SELL:
+100    OrderB (qty 4)
+
+👉 If this fails → your FIFO logic is broken
+
+🧪 5. No Match (Order Goes to Book)
+Initial Order Book
+SELL:
+105    5
+Incoming Order
+BUY 100 @ 100
+Expected Result
+BUY:
+100    100
+🧪 6. Opposite Side (Sell Matching)
+Initial Order Book
+BUY:
+100    10
+Incoming Order
+SELL 5 @ 100
+Expected Result
+Trade: 5 @ 100
+Remaining:
+BUY:
+100    5
+🧪 7. Cross Price Matching
+Initial Order Book
+BUY:
+101    5
+Incoming Order
+SELL 5 @ 100
+Expected Result
+Trade executes at 101 (resting order price)
+Book empty
+
+👉 If your engine uses wrong price → bug
+
+🧪 8. Large Sweep (Liquidity Eating)
+Initial Order Book
+SELL:
+100    5
+101    5
+102    5
+Incoming Order
+BUY 12 @ 102
+Expected Result
+5 @ 100
+5 @ 101
+2 @ 102
+
+Remaining:
+
+SELL:
+102    3
+🧪 9. Same Price Different Users
+
+Test fairness:
+
+SELL:
+100    User1 (5)
+100    User2 (5)
+
+BUY 5 should:
+
+ONLY fill User1 first
+🧪 10. Edge Case – Zero / Invalid
+
+Reject:
+
+BUY 0 @ 100
+SELL -5 @ 100
+🧪 11. Concurrency Test (IMPORTANT ⚠️)
+
+Send 2 BUY orders at same time:
+
+SELL:
+100    5
+
+Orders:
+
+BUY 5 @ 100
+BUY 5 @ 100
+Expected:
+Only one gets filled
+Second gets nothing or waits
+
+👉 If both get filled → race condition bug
+
+🧪 12. Self Trade Prevention (Optional)
+
+Same user:
+
+SELL 5 @ 100 (User A)
+BUY 5 @ 100 (User A)
+
+Expected:
+
+Either reject OR ignore match

@@ -1,0 +1,106 @@
+export const updatePositions = async (trade, takerOrder, makerOrder) => {
+  const { marketId, outcomeId, price, quantity } = trade;
+
+  // Buyer & Seller
+  const buyerId = trade.buyerId;
+  const sellerId = trade.sellerId;
+  console.log(buyerId, sellerId, "buyer and seller id");
+  // outcome side (YES / NO)
+  const order_type = takerOrder.outcome;
+  console.log("taker order type", order_type);
+
+  //  buyer position find
+  let buyerPos = await Position.findOne({
+    user: buyerId,
+    market: marketId,
+    outcome: outcomeId,
+  });
+
+  // if not available then  buyer position create
+  if (!buyerPos) {
+    buyerPos = await Position.create({
+      user: buyerId,
+      market: marketId,
+      outcome: outcomeId,
+    });
+  }
+
+  if (order_type === "yes") {
+    const totalCost =
+      buyerPos.yesShares * buyerPos.yesAvgPrice + trade.quantity * trade.price;
+    console.log("totalCost", totalCost, trade.quantity, trade.price);
+    buyerPos.yesShares += trade.quantity;
+    buyerPos.yesAvgPrice = totalCost / buyerPos.yesShares;
+  } else {
+    const totalCost =
+      buyerPos.noShares * buyerPos.noAvgPrice +
+      trade.quantity * (100 - trade.price);
+
+    buyerPos.noShares += trade.quantity;
+    buyerPos.noAvgPrice = totalCost / buyerPos.noShares;
+  }
+
+  //await buyerPos.save();
+  console.log(buyerPos, "buyerposition");
+
+  // SELLER POSITION UPDATE
+
+  let sellerPos = await Position.findOne({
+    user: sellerId,
+    market: marketId,
+    outcome: outcomeId,
+  });
+
+  if (!sellerPos) {
+    sellerPos = await Position.create({
+      user: sellerId,
+      market: marketId,
+      outcome: outcomeId,
+    });
+  }
+
+  if (order_type === "yes") {
+    // Seller is giving YES → reducing YES OR creating NO
+
+    if (sellerPos.yesShares >= quantity) {
+      // Closing YES position → realized PnL
+      const pnl = (price - sellerPos.yesAvgPrice) * quantity;
+
+      sellerPos.yesShares -= quantity;
+      sellerPos.realizedPnl += pnl;
+    } else {
+      // Short YES → becomes NO
+      const remaining = quantity - sellerPos.yesShares;
+
+      sellerPos.yesShares = 0;
+
+      const totalCost =
+        sellerPos.noShares * sellerPos.noAvgPrice + remaining * (100 - price);
+
+      sellerPos.noShares += remaining;
+      sellerPos.noAvgPrice = totalCost / sellerPos.noShares;
+    }
+  } else {
+    // Seller selling NO
+
+    if (sellerPos.noShares >= quantity) {
+      const pnl = (100 - price - sellerPos.noAvgPrice) * quantity;
+
+      sellerPos.noShares -= quantity;
+      sellerPos.realizedPnl += pnl;
+    } else {
+      const remaining = quantity - sellerPos.noShares;
+
+      sellerPos.noShares = 0;
+
+      const totalCost =
+        sellerPos.yesShares * sellerPos.yesAvgPrice + remaining * price;
+
+      sellerPos.yesShares += remaining;
+      sellerPos.yesAvgPrice = totalCost / sellerPos.yesShares;
+    }
+  }
+
+  //await sellerPos.save();
+  console.log(sellerPos, "sellerPos");
+};

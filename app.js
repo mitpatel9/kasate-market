@@ -1,8 +1,9 @@
 import express from "express";
-import { connectRedis } from "./redis/redisClient.js";
+import { redis } from "./redis/redisClient.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import cors from "cors";
 import dotenv from "dotenv";
+import { updatePositions } from "./engine/matchingEngine.js";
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ app.use(express.json());
 app.use(cors());
 
 // Initialize Redis connection
-//connectRedis();
+;
 
 // Routes
 app.use("/api", orderRoutes);

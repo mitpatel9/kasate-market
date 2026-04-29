@@ -1,7 +1,13 @@
 //import { processOrder } from "../engine/matchingEngine.js";
 import dbConnect from "../lib/mongodb.js";
-import { add_order } from "../models/orderModel.js";
 import { processOrder } from "../engine/matchingEngine.js";
+import { customAlphabet } from "nanoid";
+
+const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 8);
+
+function generateUniqueOrderId(marketId, outcomeId) {
+  return `KASATE_${marketId}_${outcomeId}_${nanoid()}`;
+}
 
 export async function placeOrder(req, res) {
   try {
@@ -34,24 +40,27 @@ export async function placeOrder(req, res) {
         .json({ success: false, msg: "Quantity must be a positive integer" });
     }
 
-    // order create
-    // const order = await add_order({
-    //   ...req.body,
-    //   status: "OPEN",
-    // });
+    const uniqueId = generateUniqueOrderId(
+      req?.body.marketId,
+      req.body.outcomeId,
+    );
+    //order object
+    const order = {
+      ...req.body,
+      orderId: uniqueId,
+      status: "OPEN",
+    };
 
     // Process order matching
     try {
-      await processOrder(order.toObject());
+      await processOrder(order);
     } catch (matchingError) {
-      console.error("Order matching error:", matchingError.message);
+      return res.status(500).json({
+        success: false,
+        msg: "Order matching error:",
+        error: matchingError.message,
+      });
     }
-
-    return res.status(201).json({
-      success: true,
-      data: order,
-      msg: "Your order has been created successfully.",
-    });
   } catch (error) {
     return res
       .status(500)

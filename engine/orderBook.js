@@ -1,52 +1,67 @@
 import { redis } from "../redis/redisClient.js";
 
-// Keys
-const BID_KEY = "orderbook:bids";
-const ASK_KEY = "orderbook:asks";
+//key generate for ask and bid
+function getBidKey(marketId, outcomeId) {
+  return `orderbook:${marketId}:${outcomeId}:bids`;
+}
+
+function getAskKey(marketId, outcomeId) {
+  return `orderbook:${marketId}:${outcomeId}:asks`;
+}
 
 // Add Order
 export async function addOrder(order) {
-  const { id, price, quantity, side } = order;
+  const { orderId, price, side, marketId, outcomeId } = order;
+
+  const sequence = await redis.incr("global:seq");
+  //const score = order.price * 1e8 + timestamp;
+
+  // generate ask and bid key
+  const bidKey = getBidKey(marketId, outcomeId);
+  const askKey = getAskKey(marketId, outcomeId);
 
   // Store full order
-  await redis.hset(`order:${id}`, {
+  await redis.hset(`order:${orderId}`, {
     ...order,
   });
 
   // Add to orderbook
   if (side === "buy") {
     // Negative price for max heap behavior
-    await redis.zadd(BID_KEY, {
-      score: -price,
-      member: id,
-    });
+    // BUY (bids → highest first, FIFO)
+    const score = -(price * 1e8) + sequence;
+    await redis.zadd(bidKey,  score,  orderId );
   } else {
-    await redis.zadd(ASK_KEY, {
-      score: price,
-      member: id,
-    });
+    // SELL (asks → lowest first, FIFO)
+    const score = price * 1e8 + sequence;
+    await redis.zadd(askKey, score,  orderId );
   }
+  console.log("order create....")
 }
 
-// Get Best Bid
-export async function getBestBid() {
-  const res = await redis.zrange(BID_KEY, 0, 0);
-  return res[0];
+// Get Best Bid (zrange(key, start, stop)
+export async function getBestBid(marketId, outcomeId) {
+  const bidKey = getBidKey(marketId, outcomeId);
+  const res = await redis.zrange(bidKey, 0, 0);
+  return res.length ? res[0] : null;
 }
 
 // Get Best Ask
-export async function getBestAsk() {
-  const res = await redis.zrange(ASK_KEY, 0, 0);
-  return res[0];
+export async function getBestAsk(marketId, outcomeId) {
+  const askKey = getAskKey(marketId, outcomeId);
+  const res = await redis.zrange(askKey, 0, 0);
+  return res.length ? res[0] : null;
 }
 
 // Remove order
-export async function removeOrder(id, side) {
+export async function removeOrder(orderId, side, marketId, outcomeId) {
+  const bidKey = getBidKey(marketId, outcomeId);
+  const askKey = getAskKey(marketId, outcomeId);
   if (side === "buy") {
-    await redis.zrem(BID_KEY, id);
+    await redis.zrem(bidKey, orderId);
   } else {
-    await redis.zrem(ASK_KEY, id);
+    await redis.zrem(askKey, orderId);
   }
 
-  await redis.del(`order:${id}`);
+  await redis.del(`order:${orderId}`);
 }

@@ -75,6 +75,7 @@ const marketSchema = new mongoose.Schema(
     market_id: { type: String, default: "", unique: true, required: true },
     additional_prohibitions: { type: String, default: "" },
     about: { type: String, default: "" },
+    news: { type: String, default: "" },
     is_paused: { type: Boolean, default: false },
     volume: { type: Number, default: 0 },
     status: {
